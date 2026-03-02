@@ -1,0 +1,28 @@
+version: 0.2
+# =============================================================
+#  buildspec/buildspec-test.yml
+#  Stage 1: Install dependencies and run tests
+# =============================================================
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+    commands:
+      - echo "Installing dependencies..."
+      - cd app && npm ci
+
+  pre_build:
+    commands:
+      - echo "Running tests..."
+      - npm test
+
+  build:
+    commands:
+      - echo "Tests passed!"
+
+reports:
+  jest-reports:
+    files:
+      - "app/coverage/clover.xml"
+    file-format: CLOVERXML

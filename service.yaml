@@ -1,0 +1,19 @@
+# =============================================================
+#  k8s/service.yaml
+# =============================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapp-service
+  namespace: default
+  labels:
+    app: webapp
+spec:
+  type: LoadBalancer          # Provisions an AWS ELB automatically
+  selector:
+    app: webapp
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 3000

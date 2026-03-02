@@ -1,0 +1,47 @@
+version: 0.2
+# =============================================================
+#  buildspec/buildspec-build.yml
+#  Stage 2: Build Docker image and push to ECR
+# =============================================================
+
+env:
+  variables:
+    AWS_DEFAULT_REGION: "us-east-1"
+    IMAGE_REPO_NAME: "webapp"
+  exported-variables:
+    - IMAGE_TAG
+    - ECR_REPO_URI
+
+phases:
+  pre_build:
+    commands:
+      - echo "Logging into Amazon ECR..."
+      - AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+      - ECR_REPO_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME
+      - IMAGE_TAG=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c1-8)
+      - echo "Image tag is $IMAGE_TAG"
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REPO_URI
+
+  build:
+    commands:
+      - echo "Building Docker image..."
+      - cd app
+      - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG .
+      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $ECR_REPO_URI:$IMAGE_TAG
+      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $ECR_REPO_URI:latest
+
+  post_build:
+    commands:
+      - echo "Pushing image to ECR..."
+      - docker push $ECR_REPO_URI:$IMAGE_TAG
+      - docker push $ECR_REPO_URI:latest
+      - echo "Writing image definitions..."
+      - printf '[{"name":"webapp","imageUri":"%s"}]' $ECR_REPO_URI:$IMAGE_TAG > ../imagedefinitions.json
+      - cat ../imagedefinitions.json
+
+artifacts:
+  files:
+    - imagedefinitions.json
+    - k8s/**/*
+    - buildspec/**/*
+  base-directory: "."
