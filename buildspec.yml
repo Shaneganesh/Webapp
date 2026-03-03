@@ -1,1 +1,29 @@
+version: 0.2
 
+env:
+  variables:
+    ECR_REPO: "342573629846.dkr.ecr.us-east-1.amazonaws.com/webapp"
+    IMAGE_TAG: "latest"
+  shell: bash
+
+phases:
+  pre_build:
+    commands:
+      - echo "Logging in to Amazon ECR..."
+      - aws --version
+      - $(aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $ECR_REPO)
+      - echo "Build started on `date`"
+  build:
+    commands:
+      - echo "Building Docker image..."
+      - docker build -t webapp .
+      - docker tag webapp:latest $ECR_REPO:$IMAGE_TAG
+  post_build:
+    commands:
+      - echo "Pushing Docker image to ECR..."
+      - docker push $ECR_REPO:$IMAGE_TAG
+      - echo "Build completed on `date`"
+
+artifacts:
+  files:
+    - '**/*'
